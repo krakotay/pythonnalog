@@ -1,0 +1,9 @@
+*.txt
+*.xlsx
+*.csv
+*.json
+*.jsonl
+*.jsonl.gz
+*.jsonl.bz2
+*.jsonl.zip
+*.jsonl.tar
