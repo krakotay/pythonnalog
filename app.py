@@ -90,7 +90,7 @@ final = pre_final_df.with_columns(
 print("суммы: ", final['debet_rub'].sum(), final['credit_rub'].sum())
 
 # %%
-# pre_final_df.write_excel(name + ".xlsx")
+final.write_excel(name + ".xlsx")
 final.write_csv(name + ".csv")
 
 
