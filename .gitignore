@@ -7,3 +7,4 @@
 *.jsonl.bz2
 *.jsonl.zip
 *.jsonl.tar
+./system/*

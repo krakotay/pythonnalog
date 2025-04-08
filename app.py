@@ -1,97 +1,33 @@
-# %%
-import polars as pl
-name = input('Название файла: ')
-columns = ['skip', 'data', 'operation', 'also_operation', 'debet_number', 'debet_rub', 'credit_number', 'credit_rub', 'd', 'saldo']
+import gradio as gr
 
-df = pl.read_csv(name + '.txt', separator='\t', has_header=False, encoding='utf8', ignore_errors=True, infer_schema_length=0, new_columns=columns)
-df
-
-# %%
-df = df.drop(['skip', 'saldo', 'd'])
-df
-
-# %%
-df['also_operation'].value_counts().sort('count')
-
-# %%
-df = df.filter(~pl.all_horizontal(pl.col('also_operation') == "<...>"))
-df
-
-# %%
-df.filter(
-    pl.col('also_operation') == 'Реализация'
-)
-
-# %%
-df = df.filter(~pl.all_horizontal(pl.all().is_null()))
-df
-
-# %%
-df = df.with_columns(
-    pl.col('data').is_not_null().cum_sum().alias('separator')
-)
-df
-
-# %%
-new_df = df.group_by('separator').agg(
-    pl.col('also_operation').unique(maintain_order=True), pl.col(['data', 'operation', 'debet_number', 'debet_rub', 'credit_number', 'credit_rub']).drop_nulls()
-)
-new_df
-
-# %%
-new_df.filter(
-    pl.any_horizontal(pl.col(['also_operation']).list.contains('г. Новокузнецк (Планета) Обособленное подразделениене не использовать с 03.06.2024'))
-)
-
-# %%
-new_df = new_df.with_columns(
-    pl.when(pl.col("also_operation").list[1].str.starts_with("Прочие внереализационные"))
-    .then(pl.col("also_operation").list.slice(1))
-    .otherwise(pl.col("also_operation"))
-).with_columns(
-    pl.when(pl.col("also_operation").list[1].str.starts_with("Прочие расходы"))
-    .then(pl.col("also_operation").list.slice(2))
-    .otherwise(pl.col("also_operation")),
-    # pl.col('also_operation').list.get(1).str.starts_with("Прочие") pl.col('also_operation').list.shift(1)
-)
-new_df
-
-# %%
-new_df.filter(
-    pl.any_horizontal(pl.col(['also_operation']).list.contains('г. Новокузнецк (Планета) Обособленное подразделениене не использовать с 03.06.2024'))
-)
-
-# %%
-new_df = new_df.with_columns(
-    pl.col('also_operation').list.get(0).alias('operation_name'),
-    pl.col('also_operation').list.get(1).alias('product_name'),
-    pl.col('also_operation').list.slice(2).list.join(' ').alias('trash')
-
-).drop('also_operation').sort('separator')
-new_df
-
-# %%
-new_df = new_df.explode(['credit_number', 'data', 'operation', 'debet_number']).sort('separator')
-new_df
-
-# %%
-pre_final_df = new_df.with_columns(
-    pl.max_horizontal(pl.col('credit_rub').list.get(1, null_on_oob=True),pl.col('debet_rub').list.get(1, null_on_oob=True) ).alias('number'),
-    pl.col('credit_rub').list.get(0, null_on_oob=True).alias('credit_rub'),
-    pl.col('debet_rub').list.get(0, null_on_oob=True).alias('debet_rub'),
-)
-pre_final_df
-
-# %%
-final = pre_final_df.with_columns(
-    pl.col('debet_rub').str.replace_all(r"\s+", "").str.replace(',', '.').cast(pl.Float64),
-    pl.col('credit_rub').str.replace_all(r"\s+", "").str.replace(',', '.').cast(pl.Float64),
-)
-print("суммы: ", final['debet_rub'].sum(), final['credit_rub'].sum())
-
-# %%
-final.write_excel(name + ".xlsx")
-final.write_csv(name + ".csv")
+from fourty_one import process_with_41
+from ninety import process_with_90
+def make_visible():
+    return gr.update(visible=True)
 
 
+def process_41(file_input, file_prefix, skip_lines):
+    gr.Info('Процесс пошёл!')
+    return process_with_41(file_input, file_prefix, skip_lines)
+def process_90(file_input, file_prefix, skip_lines):
+    gr.Info('Процесс пошёл!')
+    return process_with_90(file_input, file_prefix, skip_lines)
 
+with gr.Blocks() as app:
+    file_input = gr.File(label='Выберите txt файлы', file_count='multiple', file_types=['.txt'])
+    file_prefix = gr.Textbox(label='Префикс к названию файла (опционально)', value='41')
+    with gr.Tab('Форма 41'):
+        gr.Markdown('# Форма 41')
+        btn = gr.Button('в csv')
+        download_csv = gr.DownloadButton(label='Скачать csv', visible=False)
+        skip_lines = gr.Number(label='Пропустить в каждом txt файле линий (шапки):', precision=0, value=7, minimum=0.0)
+        btn.click(fn=process_41, inputs=[file_input, file_prefix, skip_lines], outputs=[download_csv]).success(lambda: gr.Info("Успех!")).then(fn=make_visible, outputs=[download_csv])
+    with gr.Tab('Форма 90'):
+        gr.Markdown('# Форма 90')
+        btn = gr.Button('в csv')
+        download_csv = gr.DownloadButton(label='Скачать csv', visible=False)
+        skip_lines = gr.Number(label='Пропустить в каждом txt файле линий (шапки):', precision=0, value=7, minimum=0.0)
+        btn.click(fn=process_90, inputs=[file_input, file_prefix, skip_lines], outputs=[download_csv]).success(lambda: gr.Info("Успех!")).then(fn=make_visible, outputs=[download_csv])
+        
+
+app.launch(inbrowser=True)
