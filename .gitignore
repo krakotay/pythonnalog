@@ -8,3 +8,6 @@
 *.jsonl.zip
 *.jsonl.tar
 system/
+.venv
+__pycache__
+*.ipynb

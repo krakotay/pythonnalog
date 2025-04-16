@@ -27,6 +27,8 @@ def process_with_41(file_list: list[str], file_prefix: str, skip_lines: int):
             infer_schema_length=0,
             new_columns=columns,
             skip_lines=skip_lines,
+            truncate_ragged_lines=True
+
         )
         for file in file_list
     ]

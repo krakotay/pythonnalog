@@ -28,6 +28,7 @@ def process_with_90(file_list: list[str], file_prefix: str, skip_lines: int):
             infer_schema_length=0,
             new_columns=columns,
             skip_lines=skip_lines,
+            truncate_ragged_lines=True
         ).slice(0, -2).lazy()
         for file in file_list
     ]
